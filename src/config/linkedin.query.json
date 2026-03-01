@@ -1,0 +1,19 @@
+{
+  "source": "fantastic_jobs_linkedin",
+  "rapidapi_host": "linkedin-job-search-api.p.rapidapi.com",
+  "endpoint": "Get Jobs 7 days (posted)",
+  "version": 1,
+  "notes": "Locked query for Greg. Executive-level tech/product roles. Broad capture with exclusion of junior + Field CTO. Excludes agencies. Avoids very small companies.",
+  "params": {
+    "description_type": "text",
+    "type_filter": "FULL_TIME",
+    "agency": false,
+    "employees_gte": 50,
+    "advanced_title_filter": "( 'Chief Technology Officer' | 'Chief Technical Officer' | 'Chief Information Officer' | 'Chief Product Officer' | 'Chief Information and Technology Officer' | CTO | CIO | CPO | ('Senior Vice President' <-> (Technology | Engineering | Product)) | ('Executive Vice President' <-> (Technology | Engineering | Product)) | (SVP <-> (Technology | Engineering | Product)) | (EVP <-> (Technology | Engineering | Product)) | ('Vice President' <-> (Technology | Engineering)) | (VP <-> (Technology | Engineering)) | 'Head of Technology' | 'Head of Engineering' ) & ! (assistant | associate | intern | internship | junior | 'Field CTO' | 'Field Chief Technology Officer')"
+  },
+  "paging": {
+    "limit": 100,
+    "max_requests_per_run": 10,
+    "stop_when_results_less_than_limit": true
+  }
+}
