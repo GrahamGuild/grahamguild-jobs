@@ -6,6 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "ingest:linkedin": "node src/ingest-linkedin.js",
+    "summarize:linkedin": "node src/summarize-latest-linkedin.js",
     "test": "echo \"No tests configured yet\""
   },
   "repository": {

@@ -9,7 +9,8 @@
     "type_filter": "FULL_TIME",
     "agency": false,
     "employees_gte": 50,
-    "advanced_title_filter": "( 'Chief Technology Officer' | 'Chief Technical Officer' | 'Chief Information Officer' | 'Chief Product Officer' | 'Chief Information and Technology Officer' | CTO | CIO | CPO | ('Senior Vice President' <-> (Technology | Engineering | Product)) | ('Executive Vice President' <-> (Technology | Engineering | Product)) | (SVP <-> (Technology | Engineering | Product)) | (EVP <-> (Technology | Engineering | Product)) | ('Vice President' <-> (Technology | Engineering)) | (VP <-> (Technology | Engineering)) | 'Head of Technology' | 'Head of Engineering' ) & ! (assistant | associate | intern | internship | junior | 'Field CTO' | 'Field Chief Technology Officer')"
+    "advanced_organization_filter": "! (Gartner | EWOR | Jobgether | BairesDev | Wipro | Atos)",
+    "advanced_title_filter": "( 'Chief Technology Officer' | 'Chief Technical Officer' | 'Chief Information Officer' | 'Chief Product Officer' | 'Chief Information and Technology Officer' | CTO | CIO | ('Senior Vice President' <-> (Technology | Engineering | Product)) | ('Executive Vice President' <-> (Technology | Engineering | Product)) | (SVP <-> (Technology | Engineering | Product)) | (EVP <-> (Technology | Engineering | Product)) | ('Vice President' <-> (Technology | Engineering)) | (VP <-> (Technology | Engineering)) | 'Head of Technology' | 'Head of Engineering' ) & ! (assistant | associate | intern | internship | junior | 'Field CTO' | 'Field Chief Technology Officer' | prosthetist | orthotist | clinician | 'board eligible' | supplier | procurement | sourcing | vendor | controls | 'office of the cio' | 'supplier management' | 'culture technology')"
   },
   "paging": {
     "limit": 100,
