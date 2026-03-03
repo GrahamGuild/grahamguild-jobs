@@ -6,7 +6,7 @@ const path = require("path");
 // ---- Config ----
 // Your config appears to live at: src/config/linkedin.query.json
 // (because your current code uses "./config/..." from within src/)
-const queryConfig = require("./config/linkedin.query.json");
+const queryConfig = require("../queries/linkedin_greg_v1.json");
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST;

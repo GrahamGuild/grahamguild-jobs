@@ -1,0 +1,19 @@
+{
+  "source": "fantastic_jobs_active_jobs_db",
+  "rapidapi_host": "active-jobs-db.p.rapidapi.com",
+  "endpoint_path": "active-ats-7d",
+  "version": 1,
+  "notes": "Locked query for Greg (Active Jobs DB). Executive-level tech/product roles. Broad capture; excludes junior/irrelevant terms. Excludes agencies where possible.",
+  "params": {
+    "description_type": "text",
+    "agency": false,
+    "ai_employment_type_filter": "FULL_TIME",
+    "advanced_title_filter": "( 'Chief Technology Officer' | 'Chief Technical Officer' | 'Chief Information Officer' | 'Chief Product Officer' | 'Chief Information and Technology Officer' | CTO | CIO | CPO | ('Senior Vice President' <-> (Technology | Engineering | Product)) | ('Executive Vice President' <-> (Technology | Engineering | Product)) | (SVP <-> (Technology | Engineering | Product)) | (EVP <-> (Technology | Engineering | Product)) | ('Vice President' <-> (Technology | Engineering)) | (VP <-> (Technology | Engineering)) | 'Head of Technology' | 'Head of Engineering' ) & ! (assistant | associate | intern | internship | junior | 'Field CTO' | 'Field Chief Technology Officer' | prosthetist | orthotist | clinician | 'board eligible' | supplier | procurement | sourcing | vendor)",
+    "organization_exclusion_filter": "Gartner"
+  },
+  "paging": {
+    "limit": 100,
+    "max_requests_per_run": 10,
+    "stop_when_results_less_than_limit": true
+  }
+}

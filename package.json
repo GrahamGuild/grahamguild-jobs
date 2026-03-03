@@ -7,7 +7,9 @@
   "scripts": {
     "ingest:linkedin": "node src/ingest-linkedin.js",
     "summarize:linkedin": "node src/summarize-latest-linkedin.js",
-    "test": "echo \"No tests configured yet\""
+    "ingest:active": "node src/ingest-active-jobs.js",
+    "summarize:active": "node src/summarize-latest-active-jobs.js",
+    "build:inbox": "node src/build-inbox.js"
   },
   "repository": {
     "type": "git",
