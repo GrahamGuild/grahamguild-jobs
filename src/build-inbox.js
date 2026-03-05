@@ -21,13 +21,17 @@
 const fs = require("fs");
 const path = require("path");
 
+const { createClient } = require("@supabase/supabase-js");
+
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY; // pick one name and stick with it
+
 const RAW_DIR = path.join(process.cwd(), "data", "raw");
 const INBOX_DIR = path.join(process.cwd(), "data", "inbox");
 const OUT_PATH = path.join(INBOX_DIR, "inbox_latest.json");
 const DEDUPE_REPORT_PATH = path.join(INBOX_DIR, "dedupe_report_latest.json");
-
-const STATE_DIR = path.join(process.cwd(), "data", "state");
-const DECISIONS_PATH = path.join(STATE_DIR, "decisions.json");
 
 function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -459,7 +463,7 @@ function makeUF(n) {
  * Main
  * ------------------------*/
 
-function main() {
+async function main() {
   ensureDir(INBOX_DIR);
   ensureDir(STATE_DIR);
 
@@ -603,19 +607,33 @@ function main() {
 
   const uniqueBeforeDecisions = jobs.length;
 
-  // Respect decisions
-  const decisionsDoc = tryReadJson(DECISIONS_PATH, {
-    version: 1,
-    updatedAt: null,
-    decisions: {},
-  });
-  const decisionsMap = (decisionsDoc && decisionsDoc.decisions) || {};
+  // Respect decisions (Supabase job_decisions)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      "Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY in environment for build-inbox.js",
+    );
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const { data: decidedRows, error: decidedErr } = await supabase
+    .from("job_decisions")
+    .select("job_key");
+
+  if (decidedErr) {
+    throw new Error(
+      `Failed to load job_decisions from Supabase: ${decidedErr.message}`,
+    );
+  }
+
+  const decidedSet = new Set((decidedRows || []).map((r) => r.job_key));
 
   const filtered = [];
   let filteredOutByDecision = 0;
+
   for (const job of jobs) {
-    const key = `${job.source}:${job.sourceId}`;
-    if (decisionsMap[key]) {
+    const jobKey = `${job.source}:${job.sourceId}`; // must match what your API writes into job_decisions.job_key
+    if (decidedSet.has(jobKey)) {
       filteredOutByDecision += 1;
       continue;
     }

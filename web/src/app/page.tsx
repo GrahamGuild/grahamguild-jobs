@@ -1,26 +1,46 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import NavLinksServer from "@/components/NavLinksServer";
 
 export default async function Home() {
   const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const { data: claimsData, error: claimsError } =
+    await supabase.auth.getClaims();
+  if (claimsError || !claimsData?.claims) redirect("/login");
 
   return (
-    <main style={{ maxWidth: 760, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 12 }}>GrahamGuild</h1>
-      <p style={{ marginBottom: 24 }}>Private dashboard</p>
+    <main style={{ maxWidth: 900, margin: "60px auto", padding: 20 }}>
+      <h1 style={{ fontSize: 34, marginBottom: 20 }}>GrahamGuild</h1>
 
-      <div style={{ display: "flex", gap: 12 }}>
-        <Link href="/jobs">Greg’s Job Listings</Link>
-        <Link href="/saved">Saved for Later</Link>
+      {/* Feature card */}
+      <div
+        style={{
+          background: "#f6f7f8",
+          border: "1px solid #e5e5e5",
+          borderRadius: 10,
+          padding: 22,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 22,
+            fontWeight: 600,
+            marginTop: 0,
+            marginBottom: 10,
+          }}
+        >
+          Greg&apos;s Job Search
+        </h2>
+
+        <div style={{ marginTop: 10 }}>
+          <NavLinksServer />
+        </div>
+
+        <p style={{ marginTop: 16, opacity: 0.75 }}>
+          Use Inbox to triage new roles, then review Saved and Applied as you
+          go.
+        </p>
       </div>
     </main>
   );
