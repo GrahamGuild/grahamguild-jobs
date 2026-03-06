@@ -128,18 +128,42 @@ async function classifyBatch(jobs) {
     title: j.title ?? null,
     organization: j.organization ?? null,
     location: j.location ?? null,
+    remote: typeof j.remote === "boolean" ? j.remote : null,
     url: j.url ?? null,
   }));
 
   const instructions = `
-You are helping me curate executive tech/product/transformation job listings.
+You are helping me curate executive tech/product/transformation job listings for a US-based candidate.
 
-Classify each job as:
-- "keep" if plausibly relevant to a US-based executive candidate (CTO/CIO/CPO/CTrO, EVP/SVP of Tech/Eng/Product/Transformation, Operating Partner/Advisor style roles).
-- "ignore_non_us_remote" if the job appears outside the United States AND is NOT clearly open to someone working from the United States.
-- "ignore_nonfit" if it is clearly not an executive tech/product/transformation/operator role fit.
+Classify each job as exactly one of:
+- "keep"
+- "ignore_non_us_remote"
+- "ignore_nonfit"
 
-Be conservative: only ignore when it's obvious.
+Candidate profile:
+- senior executive technology/product/transformation leader
+- interested in roles like CTO, CIO, CPO, Chief Transformation Officer
+- also interested in EVP/SVP/VP Technology or Engineering leadership roles
+- also interested in Operating Partner, Technology Advisor, Transformation leadership roles
+
+IGNORE_NONFIT if the role is clearly not a fit, including:
+- founder / co-founder roles
+- security-only leadership roles like CISO / Chief Information Security Officer
+- clearly non-executive roles
+- product manager / program manager / project manager roles
+- recruiting / sales / marketing / consultant roles
+- clearly unrelated domain-specific roles
+
+Geography rules:
+- If location explicitly indicates a non-US country/city and remote is false, classify as "ignore_non_us_remote".
+- If location explicitly indicates a non-US country/city and the role appears onsite or hybrid, classify as "ignore_non_us_remote".
+- If location explicitly indicates a non-US country/city and remote is null, lean toward "ignore_non_us_remote" unless the title/location clearly suggests US-eligible remote work.
+- If location says "Remote" with no country, you may keep it.
+- If location explicitly says US / United States / USA, you may keep it unless clearly nonfit.
+- If location is ambiguous, you may keep it.
+
+Be stricter than before about excluding international onsite or hybrid roles.
+When in doubt between "keep" and "ignore_non_us_remote" for a clearly international role that is not obviously US-remote, choose "ignore_non_us_remote".
 
 Return ONLY valid JSON (no markdown, no code fences) with this exact shape:
 {
@@ -168,12 +192,13 @@ Return ONLY valid JSON (no markdown, no code fences) with this exact shape:
       const map = new Map(parsed.results.map((r) => [r.job_key, r]));
       return inputJobs.map((j) => {
         const r = map.get(j.job_key);
-        if (!r)
+        if (!r) {
           return {
             job_key: j.job_key,
             verdict: "keep",
             reason: "missing_result_default_keep",
           };
+        }
 
         const verdict = String(r.verdict || "").trim();
         const reason = String(r.reason || "")
@@ -185,7 +210,11 @@ Return ONLY valid JSON (no markdown, no code fences) with this exact shape:
           verdict === "ignore_nonfit" ||
           verdict === "ignore_non_us_remote"
         ) {
-          return { job_key: j.job_key, verdict, reason: reason || "no_reason" };
+          return {
+            job_key: j.job_key,
+            verdict,
+            reason: reason || "no_reason",
+          };
         }
 
         return {
@@ -307,6 +336,7 @@ async function main() {
           title: original.title ?? null,
           organization: original.organization ?? null,
           location: original.location ?? null,
+          remote: typeof original.remote === "boolean" ? original.remote : null,
           url: original.url ?? null,
         });
       }
