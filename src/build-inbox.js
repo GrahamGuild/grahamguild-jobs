@@ -40,9 +40,17 @@ const STATE_DIR = path.join(process.cwd(), "data", "state");
 
 const OUT_PATH = path.join(INBOX_DIR, "inbox_latest.json");
 const DEDUPE_REPORT_PATH = path.join(INBOX_DIR, "dedupe_report_latest.json");
+const WEB_PUBLIC_INBOX_PATH = path.join(
+  process.cwd(),
+  "web",
+  "public",
+  "inbox_latest.json",
+);
 
 // We also carry forward previous inbox from this same path if present
-const PREV_INBOX_PATH = OUT_PATH;
+const PREV_INBOX_PATH = fs.existsSync(OUT_PATH)
+  ? OUT_PATH
+  : WEB_PUBLIC_INBOX_PATH;
 
 function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -548,7 +556,7 @@ async function main() {
 
   if (!liPath && !ajPath && !fs.existsSync(PREV_INBOX_PATH)) {
     console.error(
-      "No raw files found in data/raw and no existing inbox to carry forward.",
+      "No non-empty raw files found in data/raw and no existing inbox to carry forward.",
     );
     process.exit(1);
   }
