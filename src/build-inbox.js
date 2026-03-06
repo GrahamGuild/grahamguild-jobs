@@ -3,6 +3,7 @@
  *
  * Reads newest raw LinkedIn + Active Jobs JSON files from /data/raw,
  * normalizes them into a shared schema, dedupes cross-source (with transitive merging),
+ * carries forward prior inbox jobs (so inbox doesn't wipe to empty when no new raws),
  * filters out jobs that already have a decision, and writes:
  *   /data/inbox/inbox_latest.json
  *   /data/inbox/dedupe_report_latest.json
@@ -18,20 +19,30 @@
  * This preserves transitive merges (A matches B on apply, B matches C on ATS sig, etc.).
  */
 
+require("dotenv").config();
+
 const fs = require("fs");
 const path = require("path");
-
 const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+
 const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY; // pick one name and stick with it
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SECRET;
 
 const RAW_DIR = path.join(process.cwd(), "data", "raw");
 const INBOX_DIR = path.join(process.cwd(), "data", "inbox");
+const STATE_DIR = path.join(process.cwd(), "data", "state");
+
 const OUT_PATH = path.join(INBOX_DIR, "inbox_latest.json");
 const DEDUPE_REPORT_PATH = path.join(INBOX_DIR, "dedupe_report_latest.json");
+
+// We also carry forward previous inbox from this same path if present
+const PREV_INBOX_PATH = OUT_PATH;
 
 function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
@@ -60,6 +71,37 @@ function newestFileMatching(prefix) {
     .filter((p) => path.basename(p).startsWith(prefix))
     .sort(); // filenames include ISO-ish timestamps, lexicographic sort works
   return files.length ? files[files.length - 1] : null;
+}
+
+function countRawRecordsFromFile(filePath) {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return 0;
+    const raw = readJson(filePath);
+
+    // Most of your raw snapshots are arrays
+    if (Array.isArray(raw)) return raw.length;
+
+    // Some APIs return { data: [...] } or { items: [...] }
+    if (raw && Array.isArray(raw.data)) return raw.data.length;
+    if (raw && Array.isArray(raw.items)) return raw.items.length;
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+function newestNonEmptyFileMatching(prefix) {
+  const files = listFiles(RAW_DIR)
+    .filter((p) => path.basename(p).startsWith(prefix))
+    .sort(); // newest is last (timestamped filenames)
+
+  // scan from newest -> oldest, return first with >=1 record
+  for (let i = files.length - 1; i >= 0; i--) {
+    const p = files[i];
+    if (countRawRecordsFromFile(p) > 0) return p;
+  }
+  return null;
 }
 
 function normText(s) {
@@ -109,7 +151,6 @@ function urlDomain(rawUrl) {
     const x = new URL(rawUrl);
     return (x.host || "").toLowerCase();
   } catch {
-    // try after cleaning
     const cu = cleanUrl(rawUrl);
     if (!cu) return "";
     try {
@@ -135,7 +176,6 @@ function safeParseUrl(rawUrl) {
   try {
     return new URL(rawUrl);
   } catch {
-    // try adding scheme if missing
     try {
       return new URL(`https://${rawUrl}`);
     } catch {
@@ -149,15 +189,15 @@ function extractAtsSignature(rawUrl) {
   if (!urlObj) return "";
 
   const host = (urlObj.host || "").toLowerCase();
-  const pathname = (urlObj.pathname || "").toLowerCase();
-  const path = urlObj.pathname || "";
+  const pathn = urlObj.pathname || "";
+  const pathLower = pathn.toLowerCase();
   const sp = urlObj.searchParams;
 
-  // helpers
   const lastPathToken = () => {
     const toks = (urlObj.pathname || "").split("/").filter(Boolean);
     return toks.length ? toks[toks.length - 1] : "";
   };
+
   const findQueryAny = (keys) => {
     for (const k of keys) {
       const v = sp.get(k);
@@ -166,8 +206,7 @@ function extractAtsSignature(rawUrl) {
     return "";
   };
 
-  // Workday (tons of variants)
-  // Try query params first because many Workday links put req/job ids there.
+  // Workday
   if (host.includes("myworkdayjobs.com") || host.includes("workday")) {
     const q =
       findQueryAny([
@@ -183,50 +222,42 @@ function extractAtsSignature(rawUrl) {
 
     if (q) return `workday:${host}:${q}`;
 
-    // Path-based: .../job/.../<something>
-    const m1 = path.match(/\/job\/[^/]+\/([^/?#]+)/i);
+    const m1 = pathLower.match(/\/job\/[^/]+\/([^/?#]+)/i);
     if (m1 && m1[1]) return `workday:${host}:${m1[1]}`;
 
-    // Sometimes req id is the last token and looks like <slug>_<id>
     const tok = lastPathToken();
     if (tok) return `workday:${host}:${tok}`;
   }
 
   // Greenhouse
-  // https://boards.greenhouse.io/<company>/jobs/<id>
   if (host.includes("greenhouse.io")) {
     const q = findQueryAny(["gh_jid", "jid", "job_id", "jobid"]);
     if (q && /^\d+$/.test(q)) return `greenhouse:${q}`;
 
-    const m = path.match(/\/jobs\/(\d+)/i);
+    const m = pathLower.match(/\/jobs\/(\d+)/i);
     if (m && m[1]) return `greenhouse:${m[1]}`;
   }
 
   // Lever
-  // https://jobs.lever.co/<company>/<postingId>
-  // https://apply.lever.co/<company>/<postingId>
   if (host.includes("lever.co")) {
     const toks = (urlObj.pathname || "").split("/").filter(Boolean);
-    // toks: [company, postingId] or [company, postingId, ...]
     if (toks.length >= 2) return `lever:${toks[1]}`;
     const tok = lastPathToken();
     if (tok) return `lever:${tok}`;
   }
 
   // Workable
-  // https://jobs.workable.com/view/<id>/...
   if (host.includes("workable.com")) {
-    const m = path.match(/\/view\/([^/?#]+)/i);
+    const m = pathLower.match(/\/view\/([^/?#]+)/i);
     if (m && m[1]) return `workable:${m[1]}`;
   }
 
-  // Oracle Cloud / Oracle recruiting variants
-  // Many have jobId in query OR a numeric tail token.
+  // Oracle
   if (host.includes("oraclecloud.com") || host.includes("oracle")) {
     const q = findQueryAny(["jobid", "jobId", "job_id", "id"]);
     if (q && /^\d{4,}$/.test(q)) return `oracle:${q}`;
 
-    const m = path.match(/\/job\/(\d+)/i);
+    const m = pathLower.match(/\/job\/(\d+)/i);
     if (m && m[1]) return `oracle:${m[1]}`;
 
     const tok = lastPathToken();
@@ -235,27 +266,25 @@ function extractAtsSignature(rawUrl) {
 
   // iCIMS
   if (host.includes("icims.com")) {
-    const m = path.match(/\/jobs\/(\d+)/i);
+    const m = pathLower.match(/\/jobs\/(\d+)/i);
     if (m && m[1]) return `icims:${m[1]}`;
     const q = findQueryAny(["jobid", "jobId"]);
     if (q && /^\d+$/.test(q)) return `icims:${q}`;
   }
 
-  // SmartRecruiters sometimes encodes id in path
+  // SmartRecruiters
   if (host.includes("smartrecruiters.com")) {
-    // /Company/<id>-<slug> or /job/<id>
-    const m = path.match(/\/job\/([^/?#]+)/i);
+    const m = pathLower.match(/\/job\/([^/?#]+)/i);
     if (m && m[1]) return `smartrecruiters:${m[1]}`;
     const tok = lastPathToken();
     if (tok) return `smartrecruiters:${tok}`;
   }
 
-  // If nothing matched, return empty (no ATS signature)
   return "";
 }
 
 /** -------------------------
- * Normalizers
+ * Normalizers (raw ingestion)
  * ------------------------*/
 
 function normalizeLinkedIn(item) {
@@ -286,8 +315,6 @@ function normalizeLinkedIn(item) {
 
   const urlClean = cleanUrl(url);
   const applyClean = cleanUrl(applyUrl);
-
-  // IMPORTANT: ATS signature from RAW URLs (query intact)
   const atsSig = extractAtsSignature(applyUrl || url);
 
   return {
@@ -354,8 +381,6 @@ function normalizeActiveJobs(item) {
 
   const urlClean = cleanUrl(url);
   const applyClean = cleanUrl(applyUrl);
-
-  // IMPORTANT: ATS signature from RAW URLs (query intact)
   const atsSig = extractAtsSignature(applyUrl || url);
 
   return {
@@ -382,6 +407,57 @@ function normalizeActiveJobs(item) {
     _urlClean: urlClean,
     _applyClean: applyClean,
     _domain: urlDomain(applyUrl || url),
+    _dateBucket: dateBucket(datePosted),
+    _atsSig: atsSig,
+  };
+}
+
+/**
+ * Enrich an already-normalized job from the *previous inbox* so it can participate
+ * in the same dedupe/union logic (private fields are recomputed here).
+ */
+function normalizeExistingInboxJob(j) {
+  const source = j.source || "";
+  const sourceId = j.sourceId != null ? j.sourceId : null;
+
+  const title = j.title || "";
+  const organization = j.organization || "";
+  const location = j.location || "";
+
+  const datePosted = safeIsoDate(j.datePosted || j.date_posted || "");
+  const remote = !!j.remote;
+
+  const url = j.url || null;
+  const applyUrl = j.applyUrl || j.apply_url || null;
+
+  const urlClean = cleanUrl(url || "");
+  const applyClean = cleanUrl(applyUrl || "");
+  const atsSig = extractAtsSignature(applyUrl || url || "");
+
+  return {
+    source,
+    sourceId,
+
+    title,
+    organization,
+    location,
+
+    datePosted,
+    remote,
+
+    url,
+    applyUrl,
+
+    employmentType: j.employmentType || j.employment_type || null,
+    seniority: j.seniority || null,
+    employees: j.employees || null,
+    atsSource: j.atsSource || j.ats_source || null,
+
+    _orgNorm: normText(organization),
+    _titleNorm: normText(title),
+    _urlClean: urlClean,
+    _applyClean: applyClean,
+    _domain: urlDomain(applyUrl || url || ""),
     _dateBucket: dateBucket(datePosted),
     _atsSig: atsSig,
   };
@@ -467,21 +543,34 @@ async function main() {
   ensureDir(INBOX_DIR);
   ensureDir(STATE_DIR);
 
-  const liPath = newestFileMatching("linkedin_");
-  const ajPath = newestFileMatching("active_jobs_");
+  const liPath = newestNonEmptyFileMatching("linkedin_");
+  const ajPath = newestNonEmptyFileMatching("active_jobs_");
 
-  if (!liPath && !ajPath) {
+  if (!liPath && !ajPath && !fs.existsSync(PREV_INBOX_PATH)) {
     console.error(
-      "No raw files found in data/raw (expected linkedin_* and/or active_jobs_*).",
+      "No raw files found in data/raw and no existing inbox to carry forward.",
     );
     process.exit(1);
   }
 
-  const normalized = [];
+  // Load previous inbox (carry-forward pool)
+  const prevInbox = tryReadJson(PREV_INBOX_PATH, null);
+  const prevJobsArr = Array.isArray(prevInbox?.jobs) ? prevInbox.jobs : [];
+  const prevNormalized = prevJobsArr.map(normalizeExistingInboxJob);
+
   const sources = {
+    previous_inbox: fs.existsSync(PREV_INBOX_PATH)
+      ? {
+          latestFile: path.basename(PREV_INBOX_PATH),
+          rows: prevJobsArr.length,
+        }
+      : null,
     linkedin: liPath ? { latestFile: path.basename(liPath), rows: 0 } : null,
     active_jobs: ajPath ? { latestFile: path.basename(ajPath), rows: 0 } : null,
   };
+
+  // Normalize new raws
+  const normalizedNew = [];
 
   if (liPath) {
     const liRaw = readJson(liPath);
@@ -496,7 +585,7 @@ async function main() {
       );
     else {
       sources.linkedin.rows = arr.length;
-      arr.forEach((x) => normalized.push(normalizeLinkedIn(x)));
+      arr.forEach((x) => normalizedNew.push(normalizeLinkedIn(x)));
     }
   }
 
@@ -513,8 +602,57 @@ async function main() {
       );
     else {
       sources.active_jobs.rows = arr.length;
-      arr.forEach((x) => normalized.push(normalizeActiveJobs(x)));
+      arr.forEach((x) => normalizedNew.push(normalizeActiveJobs(x)));
     }
+  }
+
+  // Combine: carry-forward + new
+  const normalized = [...prevNormalized, ...normalizedNew];
+
+  // If we truly have nothing, still write an empty inbox (rare, but honest)
+  // (This should only happen if prior inbox didn't exist and raws were empty)
+  if (normalized.length === 0) {
+    const out = {
+      meta: {
+        builtAt: new Date().toISOString(),
+        inputs: {
+          previous_inbox: sources.previous_inbox?.latestFile || null,
+          linkedin: liPath ? path.basename(liPath) : null,
+          active_jobs: ajPath ? path.basename(ajPath) : null,
+        },
+      },
+      sources,
+      counts: {
+        normalizedTotal: 0,
+        uniqueBeforeDecisions: 0,
+        dupesDiscarded: 0,
+        filteredOutByDecision: 0,
+        unique: 0,
+      },
+      jobs: [],
+    };
+
+    fs.writeFileSync(OUT_PATH, JSON.stringify(out, null, 2), "utf-8");
+    fs.writeFileSync(
+      DEDUPE_REPORT_PATH,
+      JSON.stringify(
+        {
+          builtAt: out.meta.builtAt,
+          inputs: out.meta.inputs,
+          counts: out.counts,
+          groupsWithMerges: 0,
+          groups: [],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    console.log("Counts:", out.counts);
+    console.log("Wrote:", OUT_PATH);
+    console.log("Dedupe report:", DEDUPE_REPORT_PATH);
+    return;
   }
 
   // Union by keys
@@ -616,23 +754,37 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  const { data: decidedRows, error: decidedErr } = await supabase
-    .from("job_decisions")
-    .select("job_key");
+  // Pull all job_keys from job_decisions (paged)
+  const decidedSet = new Set();
+  const pageSize = 1000;
+  let from = 0;
 
-  if (decidedErr) {
-    throw new Error(
-      `Failed to load job_decisions from Supabase: ${decidedErr.message}`,
-    );
+  while (true) {
+    const to = from + pageSize - 1;
+    const { data: decidedRows, error: decidedErr } = await supabase
+      .from("job_decisions")
+      .select("job_key")
+      .range(from, to);
+
+    if (decidedErr) {
+      throw new Error(
+        `Failed to load job_decisions from Supabase: ${decidedErr.message}`,
+      );
+    }
+
+    for (const r of decidedRows || []) {
+      if (r?.job_key) decidedSet.add(String(r.job_key));
+    }
+
+    if (!decidedRows || decidedRows.length < pageSize) break;
+    from += pageSize;
   }
-
-  const decidedSet = new Set((decidedRows || []).map((r) => r.job_key));
 
   const filtered = [];
   let filteredOutByDecision = 0;
 
   for (const job of jobs) {
-    const jobKey = `${job.source}:${job.sourceId}`; // must match what your API writes into job_decisions.job_key
+    const jobKey = `${job.source}:${job.sourceId}`;
     if (decidedSet.has(jobKey)) {
       filteredOutByDecision += 1;
       continue;
@@ -646,6 +798,7 @@ async function main() {
     meta: {
       builtAt: new Date().toISOString(),
       inputs: {
+        previous_inbox: sources.previous_inbox?.latestFile || null,
         linkedin: liPath ? path.basename(liPath) : null,
         active_jobs: ajPath ? path.basename(ajPath) : null,
       },
@@ -670,6 +823,7 @@ async function main() {
     groupsWithMerges: dedupeGroups.length,
     groups: dedupeGroups.sort((a, b) => b.size - a.size),
   };
+
   fs.writeFileSync(
     DEDUPE_REPORT_PATH,
     JSON.stringify(report, null, 2),
@@ -681,4 +835,7 @@ async function main() {
   console.log("Dedupe report:", DEDUPE_REPORT_PATH);
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

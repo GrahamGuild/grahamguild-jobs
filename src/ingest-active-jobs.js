@@ -1,12 +1,18 @@
 // src/ingest-active-jobs.js
 // Fetches Active Jobs DB "active-ats-7d" results from RapidAPI using a query JSON file.
-// Saves a de-duped raw snapshot to data/raw/.
+// Saves a de-duped raw snapshot to data/raw/, but ONLY includes jobs we have NOT seen before,
+// based on Supabase table: public.job_seen (job_key PK).
+//
+// Usage:
+//   node src/ingest-active-jobs.js
 
 require("dotenv").config();
 
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
+const crypto = require("crypto");
+const { createClient } = require("@supabase/supabase-js");
 
 function assertEnv(name) {
   const v = process.env[name];
@@ -14,8 +20,11 @@ function assertEnv(name) {
   return v;
 }
 
+function ensureDir(p) {
+  fs.mkdirSync(p, { recursive: true });
+}
+
 function safeIsoForFilename(d = new Date()) {
-  // 2026-03-02T00-17-17-288Z style (colon replaced)
   return d.toISOString().replace(/:/g, "-").replace(/\./g, "-");
 }
 
@@ -24,12 +33,71 @@ function loadQueryFile(filePath) {
     ? filePath
     : path.join(process.cwd(), filePath);
   if (!fs.existsSync(abs)) throw new Error(`Query file not found: ${abs}`);
-  const raw = fs.readFileSync(abs, "utf8");
-  return JSON.parse(raw);
+  return JSON.parse(fs.readFileSync(abs, "utf8"));
 }
 
+function cleanUrl(u) {
+  if (!u || typeof u !== "string") return "";
+  try {
+    const x = new URL(u);
+    x.search = "";
+    x.hash = "";
+    const scheme = (x.protocol || "https:").toLowerCase();
+    const host = (x.host || "").toLowerCase();
+    let pathname = (x.pathname || "").replace(/\/{2,}/g, "/");
+    if (pathname.length > 1 && pathname.endsWith("/"))
+      pathname = pathname.slice(0, -1);
+    return `${scheme}//${host}${pathname}`;
+  } catch {
+    return u.trim().toLowerCase();
+  }
+}
+
+function sha1(s) {
+  return crypto.createHash("sha1").update(String(s)).digest("hex");
+}
+
+/**
+ * Determine stable source_id for Active Jobs item.
+ */
+function getSourceId(item) {
+  const id =
+    item?.id ?? item?.job_id ?? item?.req_id ?? item?.requisition_id ?? null;
+  return id != null && String(id).trim() !== "" ? String(id).trim() : "";
+}
+
+/**
+ * Determine stable job_key for job_seen + downstream.
+ * Prefer id. Fallback to url hash. Final fallback is a hash of a small stable subset.
+ */
+function getJobKey(item) {
+  const sourceId = getSourceId(item);
+  if (sourceId) return `active_jobs:${sourceId}`;
+
+  const urlCandidate =
+    item?.url ??
+    item?.job_url ??
+    item?.apply_url ??
+    item?.external_apply_url ??
+    "";
+
+  const cu = cleanUrl(urlCandidate);
+  if (cu) return `active_jobs:urlhash:${sha1(cu)}`;
+
+  return `active_jobs:fallback:${sha1(
+    JSON.stringify({
+      title: item?.title || "",
+      organization:
+        item?.organization || item?.company || item?.company_name || "",
+      date_posted: item?.date_posted || item?.datePosted || "",
+    }),
+  )}`;
+}
+
+/**
+ * Within-run de-dupe (still useful).
+ */
 function buildDedupKey(item) {
-  // Active Jobs DB usually has id; keep fallbacks just in case.
   const parts = [
     item?.id,
     item?.url,
@@ -38,7 +106,6 @@ function buildDedupKey(item) {
     item?.apply_url,
   ].filter(Boolean);
 
-  // If we somehow have nothing, stringify a small stable subset
   if (parts.length === 0) {
     return JSON.stringify({
       title: item?.title,
@@ -76,13 +143,70 @@ async function fetchPage({ baseUrl, endpointPath, host, apiKey, params }) {
   return resp.data;
 }
 
+/**
+ * Fetch existing job_seen rows for a set of job_keys.
+ * Returns a Set of keys that already exist.
+ */
+async function fetchSeenKeys(supabase, jobKeys) {
+  if (!jobKeys.length) return new Set();
+
+  // Supabase "in" has practical limits; chunk it.
+  const CHUNK = 200;
+  const seen = new Set();
+
+  for (let i = 0; i < jobKeys.length; i += CHUNK) {
+    const slice = jobKeys.slice(i, i + CHUNK);
+
+    const { data, error } = await supabase
+      .from("job_seen")
+      .select("job_key")
+      .in("job_key", slice);
+
+    if (error)
+      throw new Error(`Supabase select job_seen failed: ${error.message}`);
+
+    for (const row of data || []) {
+      if (row?.job_key) seen.add(String(row.job_key));
+    }
+  }
+
+  return seen;
+}
+
+/**
+ * Upsert job_seen (updates last_seen_at; first_seen_at stays on existing rows).
+ */
+async function upsertSeen(supabase, rows) {
+  if (!rows.length) return;
+
+  // Chunk to avoid payload limits
+  const CHUNK = 500;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const slice = rows.slice(i, i + CHUNK);
+    const { error } = await supabase
+      .from("job_seen")
+      .upsert(slice, { onConflict: "job_key" });
+
+    if (error)
+      throw new Error(`Supabase upsert job_seen failed: ${error.message}`);
+  }
+}
+
 (async function main() {
   try {
+    // RapidAPI env
     const apiKey = assertEnv("RAPIDAPI_KEY");
     const host = assertEnv("ACTIVE_JOBS_HOST");
     const baseUrl = assertEnv("ACTIVE_JOBS_BASE_URL");
     const endpointPath =
       process.env.ACTIVE_JOBS_ENDPOINT_PATH || "active-ats-7d";
+
+    // Supabase env
+    const supabaseUrl = assertEnv("SUPABASE_URL");
+    const serviceKey = assertEnv("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+    });
 
     const limit = Number(process.env.ACTIVE_JOBS_LIMIT || "100");
     const maxRequests = Number(process.env.ACTIVE_JOBS_MAX_REQUESTS || "10");
@@ -105,18 +229,23 @@ async function fetchPage({ baseUrl, endpointPath, host, apiKey, params }) {
     const paramsFromFile = query?.params || {};
     const pagingFromFile = query?.paging || {};
 
-    // Priority: env overrides file paging if present, but both are supported.
     const effectiveLimit = limit || Number(pagingFromFile.limit) || 100;
     const effectiveMaxRequests =
       maxRequests || Number(pagingFromFile.max_requests_per_run) || 10;
     const stopWhenLess =
       pagingFromFile.stop_when_results_less_than_limit !== false;
 
-    const allUnique = [];
-    const seen = new Set();
+    const outDir = path.join(process.cwd(), "data", "raw");
+    ensureDir(outDir);
 
     let offset = 0;
     let totalFetched = 0;
+    let skippedSeen = 0;
+    let dupesThisRun = 0;
+    let keptNew = 0;
+
+    const allNew = [];
+    const dedupWithinRun = new Set();
 
     for (let req = 0; req < effectiveMaxRequests; req++) {
       console.log(`Fetching offset ${offset} (limit ${effectiveLimit})...`);
@@ -135,7 +264,6 @@ async function fetchPage({ baseUrl, endpointPath, host, apiKey, params }) {
         params: pageParams,
       });
 
-      // Provider returns an array for this endpoint (like LinkedIn one).
       const items = Array.isArray(data)
         ? data
         : data?.items || data?.data || [];
@@ -143,25 +271,61 @@ async function fetchPage({ baseUrl, endpointPath, host, apiKey, params }) {
 
       totalFetched += pageCount;
 
-      let added = 0;
-      let dupes = 0;
-
-      for (const item of items) {
-        const key = buildDedupKey(item);
-        if (seen.has(key)) {
-          dupes++;
-          continue;
-        }
-        seen.add(key);
-        allUnique.push(item);
-        added++;
+      if (!items || pageCount === 0) {
+        console.log("No more results returned. Stopping.");
+        break;
       }
 
+      // within-run dedupe first
+      const pageUnique = [];
+      for (const item of items) {
+        const dKey = buildDedupKey(item);
+        if (dedupWithinRun.has(dKey)) {
+          dupesThisRun++;
+          continue;
+        }
+        dedupWithinRun.add(dKey);
+        pageUnique.push(item);
+      }
+
+      // derive keys, check seen in Supabase
+      const pageKeys = pageUnique.map(getJobKey);
+      const alreadySeen = await fetchSeenKeys(supabase, pageKeys);
+
+      const nowIso = new Date().toISOString();
+
+      // Upsert "seen" for ALL pageUnique so we don't re-process next run
+      const seenRows = pageUnique.map((item) => {
+        const sourceId = getSourceId(item) || null;
+        return {
+          job_key: getJobKey(item),
+          source: "active_jobs",
+          source_id: sourceId || "", // table has NOT NULL; keep empty string if fallback key
+          last_seen_at: nowIso,
+          // don't send first_seen_at; let default populate on insert
+        };
+      });
+      await upsertSeen(supabase, seenRows);
+
+      // keep only new
+      let addedThisPage = 0;
+      for (let i = 0; i < pageUnique.length; i++) {
+        const item = pageUnique[i];
+        const key = pageKeys[i];
+        if (alreadySeen.has(key)) {
+          skippedSeen++;
+          continue;
+        }
+        allNew.push(item);
+        addedThisPage++;
+      }
+
+      keptNew += addedThisPage;
+
       console.log(
-        `Page results: ${pageCount} | added unique: ${added} | dupes skipped: ${dupes} | total unique: ${allUnique.length}`,
+        `Page results: ${pageCount} | pageUnique: ${pageUnique.length} | new kept: ${addedThisPage} | dupes(run): ${dupesThisRun} | skipped(seen): ${skippedSeen} | total new kept: ${keptNew}`,
       );
 
-      // Stop condition
       if (stopWhenLess && pageCount < effectiveLimit) {
         console.log("Reached end of result set (results < limit). Stopping.");
         break;
@@ -170,21 +334,16 @@ async function fetchPage({ baseUrl, endpointPath, host, apiKey, params }) {
       offset += effectiveLimit;
     }
 
-    const outDir = path.join(process.cwd(), "data", "raw");
-    fs.mkdirSync(outDir, { recursive: true });
-
     const filename = `active_jobs_${safeIsoForFilename(new Date())}.json`;
     const outPath = path.join(outDir, filename);
 
-    fs.writeFileSync(outPath, JSON.stringify(allUnique, null, 2), "utf8");
+    fs.writeFileSync(outPath, JSON.stringify(allNew, null, 2), "utf8");
 
     console.log(
-      `Done. Fetched total: ${totalFetched} | Unique saved: ${allUnique.length} | File: ${outPath}`,
+      `Done. Fetched total: ${totalFetched} | New saved: ${allNew.length} | Skipped already-seen: ${skippedSeen} | Dupes within run: ${dupesThisRun} | File: ${outPath}`,
     );
   } catch (err) {
-    if (err && err.detail) {
-      console.error("API Error:", err.detail);
-    }
+    if (err && err.detail) console.error("API Error:", err.detail);
     console.error("Fatal error:", err.message || err);
     process.exit(1);
   }
