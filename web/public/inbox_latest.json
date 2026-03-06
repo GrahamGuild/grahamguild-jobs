@@ -1,32 +1,26 @@
 {
   "meta": {
-    "builtAt": "2026-03-06T00:54:30.775Z",
+    "builtAt": "2026-03-06T02:06:22.404Z",
     "inputs": {
       "previous_inbox": "inbox_latest.json",
-      "linkedin": "linkedin_2026-03-05T23-28-25-227Z.json",
-      "active_jobs": "active_jobs_2026-03-05T23-28-09-863Z.json"
+      "linkedin": null,
+      "active_jobs": null
     }
   },
   "sources": {
     "previous_inbox": {
       "latestFile": "inbox_latest.json",
-      "rows": 513
+      "rows": 230
     },
-    "linkedin": {
-      "latestFile": "linkedin_2026-03-05T23-28-25-227Z.json",
-      "rows": 270
-    },
-    "active_jobs": {
-      "latestFile": "active_jobs_2026-03-05T23-28-09-863Z.json",
-      "rows": 228
-    }
+    "linkedin": null,
+    "active_jobs": null
   },
   "counts": {
-    "normalizedTotal": 1011,
-    "uniqueBeforeDecisions": 513,
-    "dupesDiscarded": 498,
-    "filteredOutByDecision": 249,
-    "unique": 264
+    "normalizedTotal": 230,
+    "uniqueBeforeDecisions": 230,
+    "dupesDiscarded": 0,
+    "filteredOutByDecision": 1,
+    "unique": 229
   },
   "jobs": [
     {
@@ -672,142 +666,6 @@
       "seniority": "Not Applicable",
       "employees": 19305,
       "atsSource": null
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041166526",
-      "title": "RetailTech Co-Founder / Head of Engineering (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Geneva, Geneva, Switzerland",
-      "datePosted": "2026-03-03T23:14:42.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325633-retailtech-co-founder-head-of-engineering-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041166539",
-      "title": "RetailTech Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Munich, Bavaria, Germany",
-      "datePosted": "2026-03-03T23:13:22.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325626-retailtech-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041166605",
-      "title": "Renewable Energy Co-Founder / Head of Engineering (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "City of Edinburgh, Scotland, United Kingdom",
-      "datePosted": "2026-03-03T23:11:50.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325618-renewable-energy-co-founder-head-of-engineering-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041166606",
-      "title": "Renewable Energy Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Copenhagen, Capital Region of Denmark, Denmark",
-      "datePosted": "2026-03-03T23:10:31.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325611-renewable-energy-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041171104",
-      "title": "Longevity Co-Founder / Head of Engineering (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "City of Edinburgh, Scotland, United Kingdom",
-      "datePosted": "2026-03-03T23:09:03.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325603-longevity-co-founder-head-of-engineering-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041170245",
-      "title": "Longevity Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Copenhagen, Capital Region of Denmark, Denmark",
-      "datePosted": "2026-03-03T23:07:49.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325597-longevity-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041170272",
-      "title": "Logistics Co-Founder / Head of Engineering (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Florence, Tuscany, Italy",
-      "datePosted": "2026-03-03T23:06:32.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325590-logistics-co-founder-head-of-engineering-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041171498",
-      "title": "Logistics Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Stockholm, Sweden",
-      "datePosted": "2026-03-03T23:05:06.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7325582-logistics-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
     },
     {
       "source": "active_jobs",
@@ -1661,210 +1519,6 @@
     },
     {
       "source": "active_jobs",
-      "sourceId": "2043362556",
-      "title": "Sr. Digital Transformation Lead - REMOTE",
-      "organization": "Jobgether",
-      "location": "Norway",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/e5c0369c-57b7-448f-9f3e-f91470bf5176",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043362499",
-      "title": "Sr. CTO Delivery Lead (Remote)",
-      "organization": "Jobgether",
-      "location": "Estonia",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/bc7bd427-7d93-4041-a009-324fe4ca239c",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043362213",
-      "title": "Senior Digital Transformation Lead (Remote)",
-      "organization": "Jobgether",
-      "location": "Turkey",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/b88cb90d-9eb5-4c9b-92c8-da1c60aac56d",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043361637",
-      "title": "Remote Lead Digital Transformation",
-      "organization": "Jobgether",
-      "location": "Romania",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/a48be9e0-ede7-496d-8053-de36ab515e4f",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043361634",
-      "title": "Remote Digital Transformation Lead",
-      "organization": "Jobgether",
-      "location": "France",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/022857e7-4cae-4e1e-bc3c-7a764e8002cc",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043361469",
-      "title": "Remote CTO / Delivery Lead",
-      "organization": "Jobgether",
-      "location": "Romania",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/68c2f1f9-25e7-4da9-833e-6d01687110fd",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043361390",
-      "title": "Remote Chief Technical Officer Delivery Lead",
-      "organization": "Jobgether",
-      "location": "Ireland",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/14befe40-28aa-4657-989d-4cc5e40b38cc",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043361140",
-      "title": "Lead Digital Transformation (Remote)",
-      "organization": "Jobgether",
-      "location": "Ireland",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/3edfd050-e2e5-4032-96d1-785634694389",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043361046",
-      "title": "Lead CTO Delivery - Remote",
-      "organization": "Jobgether",
-      "location": "Norway",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/1612473e-71d1-48f9-a49a-642bcafe4962",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043360953",
-      "title": "Digital Transformation Lead - REMOTE",
-      "organization": "Jobgether",
-      "location": "Canada",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/4d2d1018-d81b-4da8-a345-1c7b1bab4757",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043360927",
-      "title": "CTO Delivery Lead (Remote)",
-      "organization": "Jobgether",
-      "location": "France",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/d856d9eb-b820-4fb2-a683-cbb9cb35eb68",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2043360849",
-      "title": "Chief Technical Officer Delivery Lead - REMOTE",
-      "organization": "Jobgether",
-      "location": "Canada",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/dd07e471-18c9-4552-983a-92c8d69015ba",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
       "sourceId": "2039703615",
       "title": "Chief Technology Officer",
       "organization": "MESA POWER SOLUTIONS LLC",
@@ -1872,40 +1526,6 @@
       "datePosted": "2026-03-02T05:00:00.000Z",
       "remote": false,
       "url": "https://www.paycomonline.net/v4/ats/web.php/portal/DB19AF4D55664C56748B919F7CB0BC3F/jobs/148170",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "paycom"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2039646815",
-      "title": "Operating Partner - Unit 1084",
-      "organization": "Whataburger",
-      "location": "Fort Worth, Texas, United States",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": false,
-      "url": "https://whataburger.wd5.myworkdayjobs.com/WAB_CAREERS/job/2236-Jacksboro-Hwy-Fort-Worth-TX-76114-2320/Operating-Partner---Unit-1084_JR10011296",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "workday"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2039529695",
-      "title": "VP Engineering & Maint",
-      "organization": "TEXAS PIPE AND SUPPLY COMPANY",
-      "location": "Houston, Texas, United States",
-      "datePosted": "2026-03-02T05:00:00.000Z",
-      "remote": false,
-      "url": "https://www.paycomonline.net/v4/ats/web.php/portal/40E4812FA03164604374D8F7F88C143A/jobs/187584",
       "applyUrl": null,
       "employmentType": [
         "FULL_TIME"
@@ -1962,72 +1582,6 @@
       "seniority": null,
       "employees": null,
       "atsSource": "taleo"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2038316197",
-      "title": "Head of Platform Engineering",
-      "organization": "Education Perfect",
-      "location": "New Zealand",
-      "datePosted": "2026-03-02T02:08:00.108Z",
-      "remote": true,
-      "url": "https://jobs.workable.com/view/1UKksxL4P43XgTcpsSoqzn/remote-head-of-platform-engineering-in-new-zealand-at-education-perfect",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "workable"
-    },
-    {
-      "source": "linkedin",
-      "sourceId": 4379711805,
-      "title": "Head of Platform Engineering",
-      "organization": "Education Perfect",
-      "location": "New Zealand",
-      "datePosted": "2026-03-02T02:01:59.943Z",
-      "remote": false,
-      "url": "https://nz.linkedin.com/jobs/view/head-of-platform-engineering-at-education-perfect-4379711805",
-      "applyUrl": "https://apply.workable.com/j/C2ABC673F8",
-      "employmentType": "FULL_TIME",
-      "seniority": "Mid-Senior level",
-      "employees": 873,
-      "atsSource": null
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041446612",
-      "title": "Sr. Digital Transformation & Growth Strategist - REMOTE",
-      "organization": "Jobgether",
-      "location": "South Africa",
-      "datePosted": "2026-03-01T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/f2e9c1c5-43df-4b7e-8104-8d3c780c13e6",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2041446588",
-      "title": "Sr. Digital Transformation Strategist (Remote)",
-      "organization": "Jobgether",
-      "location": "Belgium",
-      "datePosted": "2026-03-01T05:00:00.000Z",
-      "remote": true,
-      "url": "https://jobs.lever.co/jobgether/8e17fefa-12f4-413a-8636-1b68c9ad82aa",
-      "applyUrl": null,
-      "employmentType": [
-        "Full-time"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "lever.co"
     },
     {
       "source": "active_jobs",
@@ -3506,142 +3060,6 @@
     },
     {
       "source": "active_jobs",
-      "sourceId": "2028301291",
-      "title": "VR/AR Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Tirana, Central Albania, Albania",
-      "datePosted": "2026-02-24T23:33:12.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289682-vr-ar-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028301298",
-      "title": "TechBio Co-Founder / CPO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Tirana, Central Albania, Albania",
-      "datePosted": "2026-02-24T23:28:05.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289673-techbio-co-founder-cpo-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028301262",
-      "title": "SynBio Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Oxford, England, United Kingdom",
-      "datePosted": "2026-02-24T23:26:04.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289669-synbio-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028301260",
-      "title": "Supply Chain Co-Founder / CPO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Malmö, Skåne County, Sweden",
-      "datePosted": "2026-02-24T23:24:58.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289666-supply-chain-co-founder-cpo-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028303285",
-      "title": "Robotics Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Malmö, Skåne County, Sweden",
-      "datePosted": "2026-02-24T23:20:08.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289646-robotics-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028304846",
-      "title": "RetailTech Co-Founder / CPO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "City of Edinburgh, Scotland, United Kingdom",
-      "datePosted": "2026-02-24T23:18:49.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289642-retailtech-co-founder-cpo-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028303304",
-      "title": "Renewable Energy Co-Founder / Head of Engineering (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Stockholm, Sweden",
-      "datePosted": "2026-02-24T23:17:44.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289636-renewable-energy-co-founder-head-of-engineering-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
-      "sourceId": "2028303334",
-      "title": "Quantum Computing Co-Founder / CTO (100 % remote) (m/f/d)",
-      "organization": "EWOR GmbH",
-      "location": "Dublin, Leinster, Ireland",
-      "datePosted": "2026-02-24T23:17:01.000Z",
-      "remote": true,
-      "url": "https://eworgmbh.teamtailor.com/jobs/7289631-quantum-computing-co-founder-cto-100-remote-m-f-d",
-      "applyUrl": null,
-      "employmentType": [
-        "FULL_TIME"
-      ],
-      "seniority": null,
-      "employees": null,
-      "atsSource": "teamtailor"
-    },
-    {
-      "source": "active_jobs",
       "sourceId": "2028304005",
       "title": "Mobility Co-Founder / Head of Engineering (100 % remote) (m/f/d)",
       "organization": "EWOR GmbH",
@@ -4121,21 +3539,6 @@
       "seniority": null,
       "employees": null,
       "atsSource": "eightfold"
-    },
-    {
-      "source": "linkedin",
-      "sourceId": 4376823452,
-      "title": "SVP, Product Sales",
-      "organization": "National Restaurant Association",
-      "location": "Chicago, Illinois, United States",
-      "datePosted": "2026-02-23T22:06:38.000Z",
-      "remote": false,
-      "url": "https://www.linkedin.com/jobs/view/svp-product-sales-at-national-restaurant-association-4376823452",
-      "applyUrl": "https://jobs.crelate.com/portal/staffingadvisors/job/apply/5j1njjquegh6zcr8aiutfs8moy",
-      "employmentType": "FULL_TIME",
-      "seniority": "Executive",
-      "employees": 1666,
-      "atsSource": null
     },
     {
       "source": "active_jobs",
