@@ -31,6 +31,13 @@ jobs:
       ACTIVE_JOBS_ENDPOINT_PATH: active-ats-7d
       ACTIVE_JOBS_QUERY_FILE: queries/active_jobs_greg_v1.json
 
+      YC_JOBS_HOST: free-y-combinator-jobs-api.p.rapidapi.com
+      YC_JOBS_BASE_URL: https://free-y-combinator-jobs-api.p.rapidapi.com
+      YC_JOBS_ENDPOINT_PATH: active-jb-7d
+      YC_JOBS_LIMIT: "100"
+      YC_JOBS_MAX_REQUESTS: "10"
+      YC_JOBS_QUERY_FILE: queries/yc_jobs_greg_v1.json
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

@@ -1,22 +1,12 @@
 /**
  * build-inbox.js
  *
- * Reads newest raw LinkedIn + Active Jobs JSON files from /data/raw,
+ * Reads newest non-empty raw LinkedIn + Active Jobs + YC Jobs JSON files from /data/raw,
  * normalizes them into a shared schema, dedupes cross-source (with transitive merging),
  * carries forward prior inbox jobs (so inbox doesn't wipe to empty when no new raws),
  * filters out jobs that already have a decision, and writes:
  *   /data/inbox/inbox_latest.json
  *   /data/inbox/dedupe_report_latest.json
- *
- * Dedupe strategy (KEYS, in order of strength):
- *  1) ATS signature (extracted from RAW applyUrl/url, query intact)  -> strongest cross-source signal
- *  2) applyUrl (cleaned: strip query/fragment)
- *  3) non-LinkedIn url (cleaned)
- *  4) LinkedIn job url (cleaned)
- *  5) fallback signature: org_norm + title_norm + domain + date_bucket
- *
- * IMPORTANT: We generate MULTIPLE keys per job and union groups across keys.
- * This preserves transitive merges (A matches B on apply, B matches C on ATS sig, etc.).
  */
 
 require("dotenv").config();
@@ -47,7 +37,6 @@ const WEB_PUBLIC_INBOX_PATH = path.join(
   "inbox_latest.json",
 );
 
-// We also carry forward previous inbox from this same path if present
 const PREV_INBOX_PATH = fs.existsSync(OUT_PATH)
   ? OUT_PATH
   : WEB_PUBLIC_INBOX_PATH;
@@ -74,41 +63,35 @@ function listFiles(dir) {
   return fs.readdirSync(dir).map((f) => path.join(dir, f));
 }
 
+function fileHasAtLeastOneRecord(p) {
+  try {
+    if (!fs.existsSync(p)) return false;
+    const raw = fs.readFileSync(p, "utf-8");
+    if (!raw || !raw.trim()) return false;
+
+    const parsed = JSON.parse(raw);
+
+    if (Array.isArray(parsed)) return parsed.length > 0;
+    if (parsed && Array.isArray(parsed.data)) return parsed.data.length > 0;
+    if (parsed && Array.isArray(parsed.items)) return parsed.items.length > 0;
+    if (parsed && typeof parsed === "object")
+      return Object.keys(parsed).length > 0;
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function newestFileMatching(prefix) {
   const files = listFiles(RAW_DIR)
     .filter((p) => path.basename(p).startsWith(prefix))
-    .sort(); // filenames include ISO-ish timestamps, lexicographic sort works
-  return files.length ? files[files.length - 1] : null;
-}
+    .sort();
 
-function countRawRecordsFromFile(filePath) {
-  try {
-    if (!filePath || !fs.existsSync(filePath)) return 0;
-    const raw = readJson(filePath);
-
-    // Most of your raw snapshots are arrays
-    if (Array.isArray(raw)) return raw.length;
-
-    // Some APIs return { data: [...] } or { items: [...] }
-    if (raw && Array.isArray(raw.data)) return raw.data.length;
-    if (raw && Array.isArray(raw.items)) return raw.items.length;
-
-    return 0;
-  } catch {
-    return 0;
-  }
-}
-
-function newestNonEmptyFileMatching(prefix) {
-  const files = listFiles(RAW_DIR)
-    .filter((p) => path.basename(p).startsWith(prefix))
-    .sort(); // newest is last (timestamped filenames)
-
-  // scan from newest -> oldest, return first with >=1 record
   for (let i = files.length - 1; i >= 0; i--) {
-    const p = files[i];
-    if (countRawRecordsFromFile(p) > 0) return p;
+    if (fileHasAtLeastOneRecord(files[i])) return files[i];
   }
+
   return null;
 }
 
@@ -138,10 +121,8 @@ function cleanUrl(u) {
   if (!u || typeof u !== "string") return "";
   try {
     const x = new URL(u);
-    // strip query + fragment
     x.search = "";
     x.hash = "";
-    // normalize
     const scheme = (x.protocol || "https:").toLowerCase();
     const host = (x.host || "").toLowerCase();
     let pathname = (x.pathname || "").replace(/\/{2,}/g, "/");
@@ -174,10 +155,6 @@ function isLinkedInJobUrl(u) {
   const cu = cleanUrl(u);
   return cu.includes("linkedin.com/jobs/view");
 }
-
-/** -------------------------
- * ATS signature extraction (USES RAW URL - query intact)
- * ------------------------*/
 
 function safeParseUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== "string") return null;
@@ -214,7 +191,6 @@ function extractAtsSignature(rawUrl) {
     return "";
   };
 
-  // Workday
   if (host.includes("myworkdayjobs.com") || host.includes("workday")) {
     const q =
       findQueryAny([
@@ -237,7 +213,6 @@ function extractAtsSignature(rawUrl) {
     if (tok) return `workday:${host}:${tok}`;
   }
 
-  // Greenhouse
   if (host.includes("greenhouse.io")) {
     const q = findQueryAny(["gh_jid", "jid", "job_id", "jobid"]);
     if (q && /^\d+$/.test(q)) return `greenhouse:${q}`;
@@ -246,7 +221,6 @@ function extractAtsSignature(rawUrl) {
     if (m && m[1]) return `greenhouse:${m[1]}`;
   }
 
-  // Lever
   if (host.includes("lever.co")) {
     const toks = (urlObj.pathname || "").split("/").filter(Boolean);
     if (toks.length >= 2) return `lever:${toks[1]}`;
@@ -254,13 +228,11 @@ function extractAtsSignature(rawUrl) {
     if (tok) return `lever:${tok}`;
   }
 
-  // Workable
   if (host.includes("workable.com")) {
     const m = pathLower.match(/\/view\/([^/?#]+)/i);
     if (m && m[1]) return `workable:${m[1]}`;
   }
 
-  // Oracle
   if (host.includes("oraclecloud.com") || host.includes("oracle")) {
     const q = findQueryAny(["jobid", "jobId", "job_id", "id"]);
     if (q && /^\d{4,}$/.test(q)) return `oracle:${q}`;
@@ -272,7 +244,6 @@ function extractAtsSignature(rawUrl) {
     if (tok && /^\d{4,}$/.test(tok)) return `oracle:${tok}`;
   }
 
-  // iCIMS
   if (host.includes("icims.com")) {
     const m = pathLower.match(/\/jobs\/(\d+)/i);
     if (m && m[1]) return `icims:${m[1]}`;
@@ -280,7 +251,6 @@ function extractAtsSignature(rawUrl) {
     if (q && /^\d+$/.test(q)) return `icims:${q}`;
   }
 
-  // SmartRecruiters
   if (host.includes("smartrecruiters.com")) {
     const m = pathLower.match(/\/job\/([^/?#]+)/i);
     if (m && m[1]) return `smartrecruiters:${m[1]}`;
@@ -290,10 +260,6 @@ function extractAtsSignature(rawUrl) {
 
   return "";
 }
-
-/** -------------------------
- * Normalizers (raw ingestion)
- * ------------------------*/
 
 function normalizeLinkedIn(item) {
   const url = item.url || "";
@@ -328,23 +294,19 @@ function normalizeLinkedIn(item) {
   return {
     source: "linkedin",
     sourceId: item.linkedin_id || item.linkedinId || item.id || null,
-
     title,
     organization,
     location,
-
     datePosted: safeIsoDate(datePosted),
     remote: !!remote,
-
     url: url || null,
     applyUrl: applyUrl || null,
-
     employmentType: Array.isArray(item.employment_type)
       ? item.employment_type[0]
       : item.employment_type || null,
     seniority: item.seniority || null,
     employees: item.linkedin_org_employees || null,
-
+    atsSource: item.source || null,
     _orgNorm: normText(organization),
     _titleNorm: normText(title),
     _urlClean: urlClean,
@@ -395,21 +357,18 @@ function normalizeActiveJobs(item) {
     source: "active_jobs",
     sourceId:
       item.id || item.job_id || item.req_id || item.requisition_id || null,
-
     title,
     organization,
     location:
       typeof location === "string" ? location : JSON.stringify(location),
-
     datePosted: safeIsoDate(datePosted),
     remote: !!remote,
-
     url: url || null,
     applyUrl: applyUrl || null,
-
     employmentType: item.employment_type || item.employmentType || null,
     atsSource: item.source || item.ats || item.platform || null,
-
+    seniority: item.seniority || null,
+    employees: item.linkedin_org_employees || null,
     _orgNorm: normText(organization),
     _titleNorm: normText(title),
     _urlClean: urlClean,
@@ -420,10 +379,64 @@ function normalizeActiveJobs(item) {
   };
 }
 
-/**
- * Enrich an already-normalized job from the *previous inbox* so it can participate
- * in the same dedupe/union logic (private fields are recomputed here).
- */
+function normalizeYcJobs(item) {
+  const title = item.title || "";
+  const organization = item.organization || "";
+  const url = item.url || "";
+  const applyUrl = item.external_apply_url || item.externalApplyUrl || "";
+
+  const location =
+    (Array.isArray(item.locations_derived) && item.locations_derived[0]) ||
+    (Array.isArray(item.locations_raw) &&
+      item.locations_raw[0] &&
+      item.locations_raw[0].address &&
+      [
+        item.locations_raw[0].address.addressLocality,
+        item.locations_raw[0].address.addressRegion,
+        item.locations_raw[0].address.addressCountry,
+      ]
+        .filter(Boolean)
+        .join(", ")) ||
+    "";
+
+  const datePosted =
+    item.date_posted || item.datePosted || item.date_created || "";
+
+  const remote =
+    typeof item.remote_derived === "boolean"
+      ? item.remote_derived
+      : (item.location_type || "").toUpperCase() === "TELECOMMUTE";
+
+  const urlClean = cleanUrl(url);
+  const applyClean = cleanUrl(applyUrl);
+  const atsSig = extractAtsSignature(applyUrl || url);
+
+  return {
+    source: "yc_jobs",
+    sourceId: item.id || null,
+    title,
+    organization,
+    location,
+    datePosted: safeIsoDate(datePosted),
+    remote: !!remote,
+    url: url || null,
+    applyUrl: applyUrl || null,
+    employmentType: Array.isArray(item.employment_type)
+      ? item.employment_type[0]
+      : item.employment_type || null,
+    seniority: item.seniority || null,
+    employees: item.linkedin_org_employees || null,
+    atsSource: item.source || "ycombinator",
+    _orgNorm: normText(organization),
+    _titleNorm: normText(title),
+    _urlClean: urlClean,
+    _applyClean: applyClean,
+    _domain: urlDomain(applyUrl || url),
+    _dateBucket: dateBucket(datePosted),
+    _atsSig: atsSig,
+  };
+}
+
 function normalizeExistingInboxJob(j) {
   const source = j.source || "";
   const sourceId = j.sourceId != null ? j.sourceId : null;
@@ -445,22 +458,17 @@ function normalizeExistingInboxJob(j) {
   return {
     source,
     sourceId,
-
     title,
     organization,
     location,
-
     datePosted,
     remote,
-
     url,
     applyUrl,
-
     employmentType: j.employmentType || j.employment_type || null,
     seniority: j.seniority || null,
     employees: j.employees || null,
     atsSource: j.atsSource || j.ats_source || null,
-
     _orgNorm: normText(organization),
     _titleNorm: normText(title),
     _urlClean: urlClean,
@@ -470,10 +478,6 @@ function normalizeExistingInboxJob(j) {
     _atsSig: atsSig,
   };
 }
-
-/** -------------------------
- * Dedupe key generation (multiple)
- * ------------------------*/
 
 function fallbackSignature(job) {
   return `sig:${job._orgNorm}|${job._titleNorm}|${job._domain}|${job._dateBucket}`;
@@ -485,10 +489,12 @@ function jobKeys(job) {
   if (job._atsSig) keys.push(`ats:${job._atsSig}`);
   if (job._applyClean) keys.push(`apply:${job._applyClean}`);
 
-  if (job._urlClean && !isLinkedInJobUrl(job._urlClean))
+  if (job._urlClean && !isLinkedInJobUrl(job._urlClean)) {
     keys.push(`url:${job._urlClean}`);
-  if (job._urlClean && isLinkedInJobUrl(job._urlClean))
+  }
+  if (job._urlClean && isLinkedInJobUrl(job._urlClean)) {
     keys.push(`liurl:${job._urlClean}`);
+  }
 
   keys.push(fallbackSignature(job));
   return Array.from(new Set(keys));
@@ -510,10 +516,6 @@ function chooseBetter(a, b) {
   };
   return score(b) > score(a) ? b : a;
 }
-
-/** -------------------------
- * Union-Find for transitive dedupe
- * ------------------------*/
 
 function makeUF(n) {
   const parent = Array.from({ length: n }, (_, i) => i);
@@ -543,25 +545,21 @@ function makeUF(n) {
   return { find, union };
 }
 
-/** -------------------------
- * Main
- * ------------------------*/
-
 async function main() {
   ensureDir(INBOX_DIR);
   ensureDir(STATE_DIR);
 
-  const liPath = newestNonEmptyFileMatching("linkedin_");
-  const ajPath = newestNonEmptyFileMatching("active_jobs_");
+  const liPath = newestFileMatching("linkedin_");
+  const ajPath = newestFileMatching("active_jobs_");
+  const ycPath = newestFileMatching("yc_jobs_");
 
-  if (!liPath && !ajPath && !fs.existsSync(PREV_INBOX_PATH)) {
+  if (!liPath && !ajPath && !ycPath && !fs.existsSync(PREV_INBOX_PATH)) {
     console.error(
       "No non-empty raw files found in data/raw and no existing inbox to carry forward.",
     );
     process.exit(1);
   }
 
-  // Load previous inbox (carry-forward pool)
   const prevInbox = tryReadJson(PREV_INBOX_PATH, null);
   const prevJobsArr = Array.isArray(prevInbox?.jobs) ? prevInbox.jobs : [];
   const prevNormalized = prevJobsArr.map(normalizeExistingInboxJob);
@@ -575,9 +573,9 @@ async function main() {
       : null,
     linkedin: liPath ? { latestFile: path.basename(liPath), rows: 0 } : null,
     active_jobs: ajPath ? { latestFile: path.basename(ajPath), rows: 0 } : null,
+    yc_jobs: ycPath ? { latestFile: path.basename(ycPath), rows: 0 } : null,
   };
 
-  // Normalize new raws
   const normalizedNew = [];
 
   if (liPath) {
@@ -587,11 +585,11 @@ async function main() {
       : liRaw && Array.isArray(liRaw.data)
         ? liRaw.data
         : null;
-    if (!arr)
+    if (!arr) {
       console.warn(
         "LinkedIn raw file shape not recognized. Expected an array.",
       );
-    else {
+    } else {
       sources.linkedin.rows = arr.length;
       arr.forEach((x) => normalizedNew.push(normalizeLinkedIn(x)));
     }
@@ -604,21 +602,33 @@ async function main() {
       : ajRaw && Array.isArray(ajRaw.data)
         ? ajRaw.data
         : null;
-    if (!arr)
+    if (!arr) {
       console.warn(
         "Active Jobs raw file shape not recognized. Expected an array.",
       );
-    else {
+    } else {
       sources.active_jobs.rows = arr.length;
       arr.forEach((x) => normalizedNew.push(normalizeActiveJobs(x)));
     }
   }
 
-  // Combine: carry-forward + new
+  if (ycPath) {
+    const ycRaw = readJson(ycPath);
+    const arr = Array.isArray(ycRaw)
+      ? ycRaw
+      : ycRaw && Array.isArray(ycRaw.data)
+        ? ycRaw.data
+        : null;
+    if (!arr) {
+      console.warn("YC Jobs raw file shape not recognized. Expected an array.");
+    } else {
+      sources.yc_jobs.rows = arr.length;
+      arr.forEach((x) => normalizedNew.push(normalizeYcJobs(x)));
+    }
+  }
+
   const normalized = [...prevNormalized, ...normalizedNew];
 
-  // If we truly have nothing, still write an empty inbox (rare, but honest)
-  // (This should only happen if prior inbox didn't exist and raws were empty)
   if (normalized.length === 0) {
     const out = {
       meta: {
@@ -627,6 +637,7 @@ async function main() {
           previous_inbox: sources.previous_inbox?.latestFile || null,
           linkedin: liPath ? path.basename(liPath) : null,
           active_jobs: ajPath ? path.basename(ajPath) : null,
+          yc_jobs: ycPath ? path.basename(ycPath) : null,
         },
       },
       sources,
@@ -663,7 +674,6 @@ async function main() {
     return;
   }
 
-  // Union by keys
   const uf = makeUF(normalized.length);
   const keyToIndex = new Map();
 
@@ -675,7 +685,6 @@ async function main() {
     }
   }
 
-  // Group indices by root
   const groups = new Map();
   for (let i = 0; i < normalized.length; i++) {
     const r = uf.find(i);
@@ -683,14 +692,14 @@ async function main() {
     groups.get(r).push(i);
   }
 
-  // Choose best per group + build report groups
   const dedupeGroups = [];
   const uniqueJobs = [];
 
   for (const idxs of groups.values()) {
     let kept = normalized[idxs[0]];
-    for (let j = 1; j < idxs.length; j++)
+    for (let j = 1; j < idxs.length; j++) {
       kept = chooseBetter(kept, normalized[idxs[j]]);
+    }
     uniqueJobs.push(kept);
 
     if (idxs.length > 1) {
@@ -730,7 +739,6 @@ async function main() {
     }
   }
 
-  // Sort + strip private fields
   let jobs = uniqueJobs
     .sort((a, b) => {
       const da = a.datePosted ? new Date(a.datePosted).getTime() : 0;
@@ -753,7 +761,6 @@ async function main() {
 
   const uniqueBeforeDecisions = jobs.length;
 
-  // Respect decisions (Supabase job_decisions)
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
       "Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY in environment for build-inbox.js",
@@ -762,7 +769,6 @@ async function main() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Pull all job_keys from job_decisions (paged)
   const decidedSet = new Set();
   const pageSize = 1000;
   let from = 0;
@@ -809,6 +815,7 @@ async function main() {
         previous_inbox: sources.previous_inbox?.latestFile || null,
         linkedin: liPath ? path.basename(liPath) : null,
         active_jobs: ajPath ? path.basename(ajPath) : null,
+        yc_jobs: ycPath ? path.basename(ycPath) : null,
       },
     },
     sources,

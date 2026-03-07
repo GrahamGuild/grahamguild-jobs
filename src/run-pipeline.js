@@ -40,6 +40,7 @@ function copyInboxToWebPublic() {
 
 async function main() {
   runNode("src/ingest-active-jobs.js");
+  runNode("src/ingest-yc-jobs.js");
   runNode("src/ingest-linkedin.js");
   runNode("src/build-inbox.js");
   runNode("src/curate-inbox-openai.js");

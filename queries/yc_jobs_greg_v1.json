@@ -1,0 +1,11 @@
+{
+  "params": {
+    "advanced_title_filter": "('Chief Technology Officer' | 'Chief Technical Officer' | 'Chief Information Officer' | 'Chief Product Officer' | 'Chief Information and Technology Officer' | 'Chief Information Technology Officer' | 'Chief Information & Technology Officer' | 'Chief Digital Officer' | CTO | CIO | CITO | CDO | 'Chief Transformation Officer' | 'Head of Technology' | 'Head of Engineering' | 'Head of Transformation' | 'Head of Platform' | 'Head of Digital' | 'Operating Partner' | 'Technology Operating Partner' | 'Operating Advisor' | 'Technology Advisor' | 'Portfolio CTO' | 'Platform CTO' | 'Technology Partner' | 'Digital Partner' | ('Senior Vice President' <-> (Technology | Engineering | Product)) | ('Executive Vice President' <-> (Technology | Engineering | Product)) | (SVP <-> (Technology | Engineering | Product)) | (EVP <-> (Technology | Engineering | Product)) | ('Vice President' <-> (Technology | Engineering)) | (VP <-> (Technology | Engineering)) | ('Senior Vice President' <-> Transformation) | ('Executive Vice President' <-> Transformation) | (SVP <-> Transformation) | (EVP <-> Transformation) | ('Operating' <-> Partner) | ('Technology' <-> Partner) | ('Digital' <-> Transformation)) & ! (assistant | associate | intern | internship | junior | 'Field CTO' | 'Field Chief Technology Officer' | prosthetist | orthotist | clinician | 'board eligible' | supplier | procurement | sourcing | vendor | controls | 'office of the cio' | 'supplier management' | 'culture technology' | manager | 'project manager' | 'program manager' | 'product manager' | director | architect | consultant | sales | marketing | recruiter | founder | 'co-founder' | cofounder | ciso | 'chief information security officer')",
+    "date_filter": "past_week"
+  },
+  "paging": {
+    "per_request_limit": 100,
+    "max_requests_per_run": 10,
+    "stop_when_results_less_than_limit": true
+  }
+}
